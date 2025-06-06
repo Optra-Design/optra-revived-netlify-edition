@@ -1,14 +1,12 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { Play, Pause } from 'lucide-react';
 
 const SoundVisualizer = () => {
   const [bars, setBars] = useState<number[]>(Array.from({ length: 32 }, () => 20));
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(0.7);
-  const [isMuted, setIsMuted] = useState(false);
   const [audioLoaded, setAudioLoaded] = useState(false);
   const [audioError, setAudioError] = useState(false);
   
@@ -25,7 +23,7 @@ const SoundVisualizer = () => {
       try {
         const audio = new Audio();
         audio.src = '/Crab Rave - Noisestorm.mp3';
-        audio.volume = volume;
+        audio.volume = 0.7; // Fixed volume
         audio.preload = 'metadata';
         
         audio.addEventListener('loadedmetadata', () => {
@@ -69,7 +67,7 @@ const SoundVisualizer = () => {
         audioRef.current = null;
       }
     };
-  }, [volume]);
+  }, []);
 
   const initializeAudioAnalysis = useCallback(async () => {
     if (!audioRef.current || audioContextRef.current) return false;
@@ -210,29 +208,6 @@ const SoundVisualizer = () => {
     }
   };
 
-  const handleVolumeChange = (newVolume: number) => {
-    setVolume(newVolume);
-    if (audioRef.current) {
-      audioRef.current.volume = newVolume;
-    }
-  };
-
-  const toggleMute = () => {
-    const newMutedState = !isMuted;
-    setIsMuted(newMutedState);
-    if (audioRef.current) {
-      audioRef.current.muted = newMutedState;
-    }
-  };
-
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const seekTime = parseFloat(e.target.value);
-    setCurrentTime(seekTime);
-    if (audioRef.current) {
-      audioRef.current.currentTime = seekTime;
-    }
-  };
-
   useEffect(() => {
     return () => {
       if (animationRef.current) {
@@ -291,9 +266,6 @@ const SoundVisualizer = () => {
           <div className="flex items-center gap-3 text-foreground/70">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-orange-400 rounded-full animate-pulse" />
-              <button onClick={toggleMute} className="text-orange-400 hover:scale-110 transition-transform">
-                {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-              </button>
               <span className="text-sm font-medium">
                 🦀 {formatTime(currentTime)} / {formatTime(duration)} - {audioError ? 'Demo Mode' : 'Crab Rave by Noisestorm'}
               </span>
@@ -301,40 +273,6 @@ const SoundVisualizer = () => {
           </div>
         )}
       </div>
-
-      {/* Audio Controls */}
-      {isPlaying && !audioError && (
-        <div className="flex flex-col gap-4 w-full max-w-md">
-          {/* Seek Bar */}
-          <input
-            type="range"
-            min="0"
-            max={duration || 0}
-            value={currentTime}
-            onChange={handleSeek}
-            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-            style={{
-              background: `linear-gradient(to right, #f97316 0%, #f97316 ${(currentTime / duration) * 100}%, #e5e7eb ${(currentTime / duration) * 100}%, #e5e7eb 100%)`
-            }}
-          />
-          
-          {/* Volume Control */}
-          <div className="flex items-center gap-3">
-            <button onClick={toggleMute} className="text-orange-400">
-              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            </button>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.1"
-              value={volume}
-              onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-              className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-            />
-          </div>
-        </div>
-      )}
 
       {/* Visualizer */}
       <div className="flex items-end gap-2 h-64 bg-gradient-to-b from-orange-900/20 to-red-900/20 backdrop-blur-sm p-8 rounded-3xl shadow-2xl border border-orange-400/20">
