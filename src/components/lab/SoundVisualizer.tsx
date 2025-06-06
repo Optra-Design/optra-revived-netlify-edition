@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Pause } from 'lucide-react';
 
@@ -86,8 +85,8 @@ const SoundVisualizer = () => {
       const source = audioContext.createMediaElementSource(audioRef.current);
       
       // Configure analyser for better visualization
-      analyser.fftSize = 256; // Gives us 128 frequency bins
-      analyser.smoothingTimeConstant = 0.85;
+      analyser.fftSize = 512; // Gives us 256 frequency bins for better resolution
+      analyser.smoothingTimeConstant = 0.8;
       analyser.minDecibels = -90;
       analyser.maxDecibels = -10;
       
@@ -117,24 +116,21 @@ const SoundVisualizer = () => {
     // Get frequency data
     analyserRef.current.getByteFrequencyData(dataArrayRef.current);
     
-    // Process frequency data into 32 bars with better distribution
+    // Process frequency data into 32 bars with linear distribution
     const newBars = [];
-    const binCount = dataArrayRef.current.length; // Should be 128 with fftSize 256
+    const binCount = dataArrayRef.current.length; // Should be 256 with fftSize 512
     const barsCount = 32;
+    const binSize = Math.floor(binCount / barsCount);
     
-    // Use logarithmic distribution to better represent audio spectrum
     for (let i = 0; i < barsCount; i++) {
-      // Calculate frequency range for this bar using logarithmic scale
-      const startFreq = Math.pow(2, (i / barsCount) * 10); // 0 to ~1024
-      const endFreq = Math.pow(2, ((i + 1) / barsCount) * 10);
-      
-      // Map to bin indices
-      const startBin = Math.floor((startFreq / 1024) * binCount);
-      const endBin = Math.min(Math.ceil((endFreq / 1024) * binCount), binCount - 1);
-      
-      // Average the frequency data in this range
       let sum = 0;
       let count = 0;
+      
+      // Use linear distribution with some overlap for smoother visualization
+      const startBin = Math.floor(i * binSize);
+      const endBin = Math.min(startBin + binSize + 2, binCount - 1); // Small overlap
+      
+      // Average the frequency data in this range
       for (let j = startBin; j <= endBin; j++) {
         sum += dataArrayRef.current[j];
         count++;
@@ -142,9 +138,16 @@ const SoundVisualizer = () => {
       
       const average = count > 0 ? sum / count : 0;
       
-      // Convert to height percentage with better sensitivity for higher frequencies
-      const sensitivity = i > barsCount * 0.7 ? 1.5 : 1; // Boost higher frequencies
-      const height = Math.max(20, Math.min(95, (average / 255) * 100 * sensitivity));
+      // Apply gentle boost to mid and high frequencies without overdoing it
+      let sensitivity = 1;
+      if (i > barsCount * 0.4 && i < barsCount * 0.8) {
+        sensitivity = 1.2; // Slight boost for mid frequencies
+      } else if (i >= barsCount * 0.8) {
+        sensitivity = 1.1; // Very gentle boost for high frequencies
+      }
+      
+      // Convert to height percentage with medium baseline
+      const height = Math.max(25, Math.min(85, (average / 255) * 100 * sensitivity));
       newBars.push(height);
     }
     
