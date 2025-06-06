@@ -117,25 +117,34 @@ const SoundVisualizer = () => {
     // Get frequency data
     analyserRef.current.getByteFrequencyData(dataArrayRef.current);
     
-    // Process frequency data into 32 bars
+    // Process frequency data into 32 bars with better distribution
     const newBars = [];
-    const binCount = dataArrayRef.current.length;
+    const binCount = dataArrayRef.current.length; // Should be 128 with fftSize 256
     const barsCount = 32;
-    const binSize = Math.floor(binCount / barsCount);
     
+    // Use logarithmic distribution to better represent audio spectrum
     for (let i = 0; i < barsCount; i++) {
-      let sum = 0;
-      const startBin = i * binSize;
-      const endBin = Math.min(startBin + binSize, binCount);
+      // Calculate frequency range for this bar using logarithmic scale
+      const startFreq = Math.pow(2, (i / barsCount) * 10); // 0 to ~1024
+      const endFreq = Math.pow(2, ((i + 1) / barsCount) * 10);
       
-      // Average frequency data for this bar
-      for (let j = startBin; j < endBin; j++) {
+      // Map to bin indices
+      const startBin = Math.floor((startFreq / 1024) * binCount);
+      const endBin = Math.min(Math.ceil((endFreq / 1024) * binCount), binCount - 1);
+      
+      // Average the frequency data in this range
+      let sum = 0;
+      let count = 0;
+      for (let j = startBin; j <= endBin; j++) {
         sum += dataArrayRef.current[j];
+        count++;
       }
       
-      const average = sum / (endBin - startBin);
-      // Convert to height percentage with minimum of 20 and maximum of 95
-      const height = Math.max(20, Math.min(95, (average / 255) * 100));
+      const average = count > 0 ? sum / count : 0;
+      
+      // Convert to height percentage with better sensitivity for higher frequencies
+      const sensitivity = i > barsCount * 0.7 ? 1.5 : 1; // Boost higher frequencies
+      const height = Math.max(20, Math.min(95, (average / 255) * 100 * sensitivity));
       newBars.push(height);
     }
     
