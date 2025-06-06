@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
 
 const SoundVisualizer = () => {
@@ -9,6 +9,8 @@ const SoundVisualizer = () => {
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.7);
   const [isMuted, setIsMuted] = useState(false);
+  const [audioLoaded, setAudioLoaded] = useState(false);
+  const [audioError, setAudioError] = useState(false);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -17,20 +19,81 @@ const SoundVisualizer = () => {
   const animationRef = useRef<number>();
   const dataArrayRef = useRef<Uint8Array | null>(null);
 
-  const initializeAudioAnalysis = () => {
-    if (!audioRef.current || audioContextRef.current) return;
+  // Initialize audio element on component mount
+  useEffect(() => {
+    const initAudio = () => {
+      try {
+        const audio = new Audio();
+        audio.src = '/Crab Rave - Noisestorm.mp3';
+        audio.volume = volume;
+        audio.preload = 'metadata';
+        
+        audio.addEventListener('loadedmetadata', () => {
+          setDuration(audio.duration);
+          setAudioLoaded(true);
+          setAudioError(false);
+          console.log('Crab Rave loaded successfully! Duration:', audio.duration);
+        });
+        
+        audio.addEventListener('error', (e) => {
+          console.error('Error loading Crab Rave:', e);
+          setAudioError(true);
+          setAudioLoaded(false);
+        });
+
+        audio.addEventListener('ended', () => {
+          setIsPlaying(false);
+          if (animationRef.current) {
+            cancelAnimationFrame(animationRef.current);
+          }
+          setBars(Array.from({ length: 32 }, () => 20));
+          setCurrentTime(0);
+        });
+
+        audio.addEventListener('timeupdate', () => {
+          setCurrentTime(audio.currentTime);
+        });
+        
+        audioRef.current = audio;
+      } catch (error) {
+        console.error('Failed to initialize audio:', error);
+        setAudioError(true);
+      }
+    };
+
+    initAudio();
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, [volume]);
+
+  const initializeAudioAnalysis = useCallback(async () => {
+    if (!audioRef.current || audioContextRef.current) return false;
 
     try {
-      // Create audio context and analyser
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      // Create audio context
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      const audioContext = new AudioContext();
+      
+      // Resume context if suspended
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
+      
       const analyser = audioContext.createAnalyser();
       const source = audioContext.createMediaElementSource(audioRef.current);
       
-      // Configure analyser
-      analyser.fftSize = 128; // This gives us 64 frequency bins
-      analyser.smoothingTimeConstant = 0.8;
+      // Configure analyser for better visualization
+      analyser.fftSize = 256; // Gives us 128 frequency bins
+      analyser.smoothingTimeConstant = 0.85;
+      analyser.minDecibels = -90;
+      analyser.maxDecibels = -10;
       
-      // Connect nodes
+      // Connect audio graph
       source.connect(analyser);
       analyser.connect(audioContext.destination);
       
@@ -41,77 +104,82 @@ const SoundVisualizer = () => {
       dataArrayRef.current = new Uint8Array(analyser.frequencyBinCount);
       
       console.log('Audio analysis initialized successfully!');
+      return true;
     } catch (error) {
       console.error('Error initializing audio analysis:', error);
+      return false;
     }
-  };
+  }, []);
 
-  const updateVisualization = () => {
-    if (!analyserRef.current || !dataArrayRef.current || !isPlaying) return;
+  const updateVisualization = useCallback(() => {
+    if (!analyserRef.current || !dataArrayRef.current || !isPlaying) {
+      return;
+    }
 
     // Get frequency data
     analyserRef.current.getByteFrequencyData(dataArrayRef.current);
     
-    // Convert frequency data to bar heights
+    // Process frequency data into 32 bars
     const newBars = [];
-    const frequencyBinSize = Math.floor(dataArrayRef.current.length / 32);
+    const binCount = dataArrayRef.current.length;
+    const barsCount = 32;
+    const binSize = Math.floor(binCount / barsCount);
     
-    for (let i = 0; i < 32; i++) {
+    for (let i = 0; i < barsCount; i++) {
       let sum = 0;
-      const startIndex = i * frequencyBinSize;
-      const endIndex = Math.min(startIndex + frequencyBinSize, dataArrayRef.current.length);
+      const startBin = i * binSize;
+      const endBin = Math.min(startBin + binSize, binCount);
       
-      // Average the frequency data for this bar
-      for (let j = startIndex; j < endIndex; j++) {
+      // Average frequency data for this bar
+      for (let j = startBin; j < endBin; j++) {
         sum += dataArrayRef.current[j];
       }
       
-      const average = sum / (endIndex - startIndex);
-      // Convert to percentage (0-100) with minimum height of 20
-      const height = Math.max(20, (average / 255) * 95);
+      const average = sum / (endBin - startBin);
+      // Convert to height percentage with minimum of 20 and maximum of 95
+      const height = Math.max(20, Math.min(95, (average / 255) * 100));
       newBars.push(height);
     }
     
     setBars(newBars);
-    
-    // Update time
-    if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
-    }
-    
     animationRef.current = requestAnimationFrame(updateVisualization);
-  };
+  }, [isPlaying]);
+
+  const startDemoMode = useCallback(() => {
+    console.log('Starting demo mode with animated bars...');
+    
+    const animate = () => {
+      const time = Date.now() * 0.003;
+      setBars(prev => prev.map((_, i) => {
+        const wave1 = Math.sin(time * 2 + i * 0.5) * 25 + 45;
+        const wave2 = Math.sin(time * 1.5 + i * 0.3) * 20 + 35;
+        const wave3 = Math.sin(time * 2.5 + i * 0.8) * 15 + 25;
+        return Math.max(20, Math.min(85, (wave1 + wave2 + wave3) / 3));
+      }));
+      
+      if (isPlaying && audioError) {
+        animationRef.current = requestAnimationFrame(animate);
+      }
+    };
+    
+    if (audioError) {
+      animate();
+    }
+  }, [isPlaying, audioError]);
 
   const toggleAudio = async () => {
-    if (!audioRef.current) {
-      // Create audio element
-      const audio = new Audio('/Crab Rave - Noisestorm.mp3');
-      audio.crossOrigin = 'anonymous';
-      audio.volume = volume;
-      audioRef.current = audio;
-      
-      audio.addEventListener('loadedmetadata', () => {
-        setDuration(audio.duration);
-        console.log('Crab Rave loaded successfully!');
-      });
-      
-      audio.addEventListener('error', (e) => {
-        console.error('Error loading Crab Rave:', e);
-        startDemoMode();
-        return;
-      });
-
-      audio.addEventListener('ended', () => {
-        setIsPlaying(false);
-        if (animationRef.current) {
-          cancelAnimationFrame(animationRef.current);
-        }
-        setBars(Array.from({ length: 32 }, () => 20));
-      });
-    }
+    if (!audioRef.current) return;
 
     if (!isPlaying) {
       try {
+        // Initialize audio analysis if not already done
+        if (!audioContextRef.current) {
+          const initialized = await initializeAudioAnalysis();
+          if (!initialized && !audioError) {
+            console.warn('Audio analysis failed to initialize');
+          }
+        }
+        
         // Resume audio context if suspended
         if (audioContextRef.current?.state === 'suspended') {
           await audioContextRef.current.resume();
@@ -120,14 +188,16 @@ const SoundVisualizer = () => {
         await audioRef.current.play();
         setIsPlaying(true);
         
-        // Initialize audio analysis on first play
-        if (!audioContextRef.current) {
-          initializeAudioAnalysis();
+        // Start visualization
+        if (analyserRef.current && !audioError) {
+          updateVisualization();
+        } else {
+          startDemoMode();
         }
         
-        updateVisualization();
       } catch (error) {
         console.error('Error playing audio:', error);
+        setIsPlaying(true);
         startDemoMode();
       }
     } else {
@@ -140,26 +210,6 @@ const SoundVisualizer = () => {
     }
   };
 
-  const startDemoMode = () => {
-    console.log('Starting demo mode...');
-    setIsPlaying(true);
-    
-    const animate = () => {
-      const time = Date.now() * 0.001;
-      setBars(prev => prev.map((_, i) => {
-        const wave1 = Math.sin(time * 2 + i * 0.5) * 30 + 50;
-        const wave2 = Math.sin(time * 3 + i * 0.3) * 20 + 30;
-        const wave3 = Math.sin(time * 1.5 + i * 0.8) * 25 + 40;
-        return Math.max(20, Math.min(90, (wave1 + wave2 + wave3) / 3));
-      }));
-      
-      if (isPlaying) {
-        animationRef.current = requestAnimationFrame(animate);
-      }
-    };
-    animate();
-  };
-
   const handleVolumeChange = (newVolume: number) => {
     setVolume(newVolume);
     if (audioRef.current) {
@@ -168,9 +218,10 @@ const SoundVisualizer = () => {
   };
 
   const toggleMute = () => {
-    setIsMuted(!isMuted);
+    const newMutedState = !isMuted;
+    setIsMuted(newMutedState);
     if (audioRef.current) {
-      audioRef.current.muted = !isMuted;
+      audioRef.current.muted = newMutedState;
     }
   };
 
@@ -187,14 +238,21 @@ const SoundVisualizer = () => {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
       if (audioContextRef.current) {
         audioContextRef.current.close();
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (isPlaying) {
+      if (analyserRef.current && !audioError) {
+        updateVisualization();
+      } else {
+        startDemoMode();
+      }
+    }
+  }, [isPlaying, updateVisualization, startDemoMode, audioError]);
 
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60);
@@ -207,21 +265,24 @@ const SoundVisualizer = () => {
       <div className="flex items-center gap-6">
         <button
           onClick={toggleAudio}
+          disabled={!audioLoaded && !audioError}
           className={`flex items-center gap-3 px-8 py-4 rounded-full font-semibold transition-all duration-300 hover:scale-105 shadow-lg ${
             isPlaying
               ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-red-500/25'
+              : audioError
+              ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-yellow-500/25'
               : 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-orange-500/25'
-          }`}
+          } ${(!audioLoaded && !audioError) ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           {isPlaying ? (
             <>
               <Pause className="w-6 h-6" />
-              Stop Crab Rave
+              Stop {audioError ? 'Demo' : 'Crab Rave'}
             </>
           ) : (
             <>
               <Play className="w-6 h-6" />
-              🦀 Play Crab Rave 🦀
+              🦀 Play {audioError ? 'Demo Mode' : 'Crab Rave'} 🦀
             </>
           )}
         </button>
@@ -234,7 +295,7 @@ const SoundVisualizer = () => {
                 {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
               </button>
               <span className="text-sm font-medium">
-                🦀 {formatTime(currentTime)} / {formatTime(duration)} - Crab Rave by Noisestorm
+                🦀 {formatTime(currentTime)} / {formatTime(duration)} - {audioError ? 'Demo Mode' : 'Crab Rave by Noisestorm'}
               </span>
             </div>
           </div>
@@ -242,7 +303,7 @@ const SoundVisualizer = () => {
       </div>
 
       {/* Audio Controls */}
-      {isPlaying && (
+      {isPlaying && !audioError && (
         <div className="flex flex-col gap-4 w-full max-w-md">
           {/* Seek Bar */}
           <input
@@ -295,9 +356,13 @@ const SoundVisualizer = () => {
       </div>
 
       <p className="text-center text-foreground/60 max-w-md">
-        {isPlaying 
-          ? "🦀 Real-time audio analysis of Crab Rave! The bars react to actual frequency data from the song." 
-          : "Ready to experience the legendary Crab Rave with real-time audio visualization?"
+        {audioError 
+          ? "🚧 Audio file not accessible - showing demo visualization with animated bars"
+          : isPlaying 
+            ? "🦀 Real-time audio analysis of Crab Rave! The bars react to actual frequency data from the song." 
+            : audioLoaded
+              ? "Ready to experience the legendary Crab Rave with real-time audio visualization?"
+              : "Loading Crab Rave..."
         }
       </p>
     </div>
