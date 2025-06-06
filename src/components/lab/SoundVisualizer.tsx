@@ -6,58 +6,78 @@ const SoundVisualizer = () => {
   const [bars, setBars] = useState<number[]>(Array.from({ length: 32 }, () => 20));
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(0.7);
+  const [isMuted, setIsMuted] = useState(false);
+  
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const animationRef = useRef<number>();
+  const dataArrayRef = useRef<Uint8Array | null>(null);
 
-  // Crab Rave beat patterns - synchronized to the actual song
-  const crabRavePatterns = [
-    // Intro (0-10s)
-    Array.from({ length: 32 }, (_, i) => 20 + Math.sin(i * 0.3) * 10),
-    Array.from({ length: 32 }, (_, i) => 25 + Math.sin(i * 0.4) * 15),
-    Array.from({ length: 32 }, (_, i) => 30 + Math.sin(i * 0.5) * 20),
-    
-    // Build up (10-20s)
-    Array.from({ length: 32 }, (_, i) => 35 + Math.sin(i * 0.6) * 25),
-    Array.from({ length: 32 }, (_, i) => 40 + Math.sin(i * 0.7) * 30),
-    Array.from({ length: 32 }, (_, i) => 50 + Math.sin(i * 0.8) * 35),
-    
-    // First drop (20-40s) - High energy
-    Array.from({ length: 32 }, (_, i) => 60 + Math.sin(i * 1.2) * 35 + Math.cos(i * 0.8) * 20),
-    Array.from({ length: 32 }, (_, i) => 70 + Math.sin(i * 1.5) * 30 + Math.cos(i * 1.1) * 25),
-    Array.from({ length: 32 }, (_, i) => 80 + Math.sin(i * 1.8) * 25 + Math.cos(i * 1.4) * 30),
-    Array.from({ length: 32 }, (_, i) => 85 + Math.sin(i * 2.1) * 20 + Math.cos(i * 1.7) * 35),
-    
-    // Breakdown (40-60s)
-    Array.from({ length: 32 }, (_, i) => 45 + Math.sin(i * 0.9) * 20),
-    Array.from({ length: 32 }, (_, i) => 40 + Math.sin(i * 1.0) * 25),
-    
-    // Second drop (60-80s) - Peak energy
-    Array.from({ length: 32 }, (_, i) => 90 + Math.sin(i * 2.5) * 15 + Math.cos(i * 2.0) * 40),
-    Array.from({ length: 32 }, (_, i) => 95 + Math.sin(i * 3.0) * 10 + Math.cos(i * 2.3) * 45),
-    Array.from({ length: 32 }, (_, i) => 92 + Math.sin(i * 2.8) * 12 + Math.cos(i * 2.6) * 42),
-    
-    // Outro (80s+)
-    Array.from({ length: 32 }, (_, i) => 60 + Math.sin(i * 1.5) * 30),
-    Array.from({ length: 32 }, (_, i) => 40 + Math.sin(i * 1.0) * 20),
-    Array.from({ length: 32 }, (_, i) => 25 + Math.sin(i * 0.5) * 15),
-  ];
+  const initializeAudioAnalysis = () => {
+    if (!audioRef.current || audioContextRef.current) return;
 
-  const getVisualizationForTime = (time: number) => {
-    const patternIndex = Math.floor(time / 5) % crabRavePatterns.length;
-    const pattern = crabRavePatterns[patternIndex];
-    const beatMultiplier = 1 + Math.sin(time * 4) * 0.3; // Beat sync
-    
-    return pattern.map(height => Math.max(20, Math.min(95, height * beatMultiplier)));
+    try {
+      // Create audio context and analyser
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const analyser = audioContext.createAnalyser();
+      const source = audioContext.createMediaElementSource(audioRef.current);
+      
+      // Configure analyser
+      analyser.fftSize = 128; // This gives us 64 frequency bins
+      analyser.smoothingTimeConstant = 0.8;
+      
+      // Connect nodes
+      source.connect(analyser);
+      analyser.connect(audioContext.destination);
+      
+      // Store references
+      audioContextRef.current = audioContext;
+      analyserRef.current = analyser;
+      sourceRef.current = source;
+      dataArrayRef.current = new Uint8Array(analyser.frequencyBinCount);
+      
+      console.log('Audio analysis initialized successfully!');
+    } catch (error) {
+      console.error('Error initializing audio analysis:', error);
+    }
   };
 
   const updateVisualization = () => {
-    if (!audioRef.current || !isPlaying) return;
+    if (!analyserRef.current || !dataArrayRef.current || !isPlaying) return;
 
-    const time = audioRef.current.currentTime;
-    setCurrentTime(time);
+    // Get frequency data
+    analyserRef.current.getByteFrequencyData(dataArrayRef.current);
     
-    const newBars = getVisualizationForTime(time);
+    // Convert frequency data to bar heights
+    const newBars = [];
+    const frequencyBinSize = Math.floor(dataArrayRef.current.length / 32);
+    
+    for (let i = 0; i < 32; i++) {
+      let sum = 0;
+      const startIndex = i * frequencyBinSize;
+      const endIndex = Math.min(startIndex + frequencyBinSize, dataArrayRef.current.length);
+      
+      // Average the frequency data for this bar
+      for (let j = startIndex; j < endIndex; j++) {
+        sum += dataArrayRef.current[j];
+      }
+      
+      const average = sum / (endIndex - startIndex);
+      // Convert to percentage (0-100) with minimum height of 20
+      const height = Math.max(20, (average / 255) * 95);
+      newBars.push(height);
+    }
+    
     setBars(newBars);
+    
+    // Update time
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime);
+    }
     
     animationRef.current = requestAnimationFrame(updateVisualization);
   };
@@ -67,24 +87,44 @@ const SoundVisualizer = () => {
       // Create audio element
       const audio = new Audio('/Crab Rave - Noisestorm.mp3');
       audio.crossOrigin = 'anonymous';
+      audio.volume = volume;
       audioRef.current = audio;
       
-      audio.addEventListener('loadeddata', () => {
+      audio.addEventListener('loadedmetadata', () => {
+        setDuration(audio.duration);
         console.log('Crab Rave loaded successfully!');
       });
       
       audio.addEventListener('error', (e) => {
         console.error('Error loading Crab Rave:', e);
-        // Fallback to demo mode
         startDemoMode();
         return;
+      });
+
+      audio.addEventListener('ended', () => {
+        setIsPlaying(false);
+        if (animationRef.current) {
+          cancelAnimationFrame(animationRef.current);
+        }
+        setBars(Array.from({ length: 32 }, () => 20));
       });
     }
 
     if (!isPlaying) {
       try {
+        // Resume audio context if suspended
+        if (audioContextRef.current?.state === 'suspended') {
+          await audioContextRef.current.resume();
+        }
+        
         await audioRef.current.play();
         setIsPlaying(true);
+        
+        // Initialize audio analysis on first play
+        if (!audioContextRef.current) {
+          initializeAudioAnalysis();
+        }
+        
         updateVisualization();
       } catch (error) {
         console.error('Error playing audio:', error);
@@ -101,7 +141,6 @@ const SoundVisualizer = () => {
   };
 
   const startDemoMode = () => {
-    // Fallback: animated bars without audio
     console.log('Starting demo mode...');
     setIsPlaying(true);
     
@@ -121,6 +160,28 @@ const SoundVisualizer = () => {
     animate();
   };
 
+  const handleVolumeChange = (newVolume: number) => {
+    setVolume(newVolume);
+    if (audioRef.current) {
+      audioRef.current.volume = newVolume;
+    }
+  };
+
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+    if (audioRef.current) {
+      audioRef.current.muted = !isMuted;
+    }
+  };
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const seekTime = parseFloat(e.target.value);
+    setCurrentTime(seekTime);
+    if (audioRef.current) {
+      audioRef.current.currentTime = seekTime;
+    }
+  };
+
   useEffect(() => {
     return () => {
       if (animationRef.current) {
@@ -128,6 +189,9 @@ const SoundVisualizer = () => {
       }
       if (audioRef.current) {
         audioRef.current.pause();
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
       }
     };
   }, []);
@@ -166,15 +230,52 @@ const SoundVisualizer = () => {
           <div className="flex items-center gap-3 text-foreground/70">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-orange-400 rounded-full animate-pulse" />
-              <Volume2 className="w-5 h-5 text-orange-400" />
+              <button onClick={toggleMute} className="text-orange-400 hover:scale-110 transition-transform">
+                {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+              </button>
               <span className="text-sm font-medium">
-                🦀 {formatTime(currentTime)} - Crab Rave by Noisestorm
+                🦀 {formatTime(currentTime)} / {formatTime(duration)} - Crab Rave by Noisestorm
               </span>
             </div>
           </div>
         )}
       </div>
 
+      {/* Audio Controls */}
+      {isPlaying && (
+        <div className="flex flex-col gap-4 w-full max-w-md">
+          {/* Seek Bar */}
+          <input
+            type="range"
+            min="0"
+            max={duration || 0}
+            value={currentTime}
+            onChange={handleSeek}
+            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            style={{
+              background: `linear-gradient(to right, #f97316 0%, #f97316 ${(currentTime / duration) * 100}%, #e5e7eb ${(currentTime / duration) * 100}%, #e5e7eb 100%)`
+            }}
+          />
+          
+          {/* Volume Control */}
+          <div className="flex items-center gap-3">
+            <button onClick={toggleMute} className="text-orange-400">
+              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            </button>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              value={volume}
+              onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+              className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Visualizer */}
       <div className="flex items-end gap-2 h-64 bg-gradient-to-b from-orange-900/20 to-red-900/20 backdrop-blur-sm p-8 rounded-3xl shadow-2xl border border-orange-400/20">
         {bars.map((height, i) => (
           <div
@@ -195,8 +296,8 @@ const SoundVisualizer = () => {
 
       <p className="text-center text-foreground/60 max-w-md">
         {isPlaying 
-          ? "🦀 Crab Rave time! Visualizing the legendary electronic dance anthem by Noisestorm" 
-          : "Ready to experience the legendary Crab Rave with synchronized visualizations?"
+          ? "🦀 Real-time audio analysis of Crab Rave! The bars react to actual frequency data from the song." 
+          : "Ready to experience the legendary Crab Rave with real-time audio visualization?"
         }
       </p>
     </div>
