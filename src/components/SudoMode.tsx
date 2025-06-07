@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Palette, Layout, Zap, LogIn, LogOut, User, Sparkles, Smartphone, Bug, Minimize2, Maximize2, Volume2, VolumeX, Gamepad2, Wand2, Rainbow } from 'lucide-react';
+import { Settings, Palette, Layout, Zap, LogIn, LogOut, User, Sparkles, Smartphone, Bug, Minimize2, Maximize2, Volume2, VolumeX, Gamepad2, Wand2, Rainbow, Camera } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import InstagramGenerator from './lab/InstagramGenerator';
 
 const SudoMode = () => {
   const [isActive, setIsActive] = useState(false);
@@ -12,6 +13,7 @@ const SudoMode = () => {
   const [theme, setTheme] = useState('default');
   const [layout, setLayout] = useState('default');
   const [showLogin, setShowLogin] = useState(false);
+  const [showInstagramGenerator, setShowInstagramGenerator] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [touchCount, setTouchCount] = useState(0);
@@ -237,6 +239,32 @@ const SudoMode = () => {
 
   if (!isActive) return null;
 
+  // Show Instagram Generator overlay
+  if (showInstagramGenerator) {
+    return (
+      <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-lg p-4 overflow-y-auto">
+        <div className="max-w-lg mx-auto">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gradient flex items-center gap-2">
+              <Camera className="w-6 h-6" />
+              Instagram Generator
+            </h2>
+            <button
+              onClick={() => {
+                setShowInstagramGenerator(false);
+                playClickSound();
+              }}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+          <InstagramGenerator />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       {confettiActive && (
@@ -259,8 +287,8 @@ const SudoMode = () => {
       )}
       
       <div 
-        className={`fixed z-50 bg-background/95 backdrop-blur-lg border border-white/30 rounded-3xl shadow-2xl animate-fade-in glow-hover transition-all duration-300 ${
-          isMinimized ? 'w-16 h-16 cursor-move hover:scale-110' : 'p-6 max-w-sm w-80 top-4 left-4'
+        className={`fixed z-50 bg-background/95 backdrop-blur-lg border border-white/30 rounded-2xl sm:rounded-3xl shadow-2xl animate-fade-in glow-hover transition-all duration-300 ${
+          isMinimized ? 'w-12 h-12 sm:w-16 sm:h-16 cursor-move hover:scale-110' : 'p-3 sm:p-6 max-w-xs sm:max-w-sm w-80 top-2 sm:top-4 left-2 sm:left-4 max-h-[90vh] overflow-y-auto'
         } ${funMode ? 'animate-pulse border-rainbow' : ''}`}
         style={isMinimized ? { 
           top: `${position.y}px`, 
@@ -276,33 +304,33 @@ const SudoMode = () => {
                 setIsMinimized(false);
                 playClickSound();
               }}
-              className="w-full h-full flex items-center justify-center hover:bg-white/10 rounded-3xl transition-colors group"
+              className="w-full h-full flex items-center justify-center hover:bg-white/10 rounded-2xl sm:rounded-3xl transition-colors group"
             >
-              <Settings className={`w-6 h-6 text-gradient group-hover:scale-110 transition-transform ${funMode ? 'animate-spin' : 'animate-pulse'}`} style={{ animationDuration: '3s' }} />
+              <Settings className={`w-4 h-4 sm:w-6 sm:h-6 text-gradient group-hover:scale-110 transition-transform ${funMode ? 'animate-spin' : 'animate-pulse'}`} style={{ animationDuration: '3s' }} />
             </button>
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <Settings className={`w-6 h-6 text-gradient ${funMode ? 'animate-spin' : 'animate-pulse'}`} style={{ animationDuration: '3s' }} />
-                <h3 className="font-bold text-gradient text-lg">SUDO MODE</h3>
-                <span className="text-xs bg-red-500/30 text-red-400 px-3 py-1 rounded-full animate-pulse font-bold">ADMIN</span>
-                {funMode && <Rainbow className="w-5 h-5 text-rainbow animate-spin" />}
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Settings className={`w-5 h-5 sm:w-6 sm:h-6 text-gradient ${funMode ? 'animate-spin' : 'animate-pulse'}`} style={{ animationDuration: '3s' }} />
+                <h3 className="font-bold text-gradient text-base sm:text-lg">SUDO MODE</h3>
+                <span className="text-xs bg-red-500/30 text-red-400 px-2 sm:px-3 py-1 rounded-full animate-pulse font-bold">ADMIN</span>
+                {funMode && <Rainbow className="w-4 h-4 sm:w-5 sm:h-5 text-rainbow animate-spin" />}
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-1 sm:gap-2">
                 <button
                   onClick={() => {
                     setSoundEnabled(!soundEnabled);
                     playClickSound();
                   }}
-                  className="p-2 hover:bg-white/10 rounded-lg transition-colors group"
+                  className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg transition-colors group"
                   title={soundEnabled ? "Disable Sound" : "Enable Sound"}
                 >
                   {soundEnabled ? (
-                    <Volume2 className="w-4 h-4 text-green-400 group-hover:scale-110 transition-transform" />
+                    <Volume2 className="w-3 h-3 sm:w-4 sm:h-4 text-green-400 group-hover:scale-110 transition-transform" />
                   ) : (
-                    <VolumeX className="w-4 h-4 text-red-400 group-hover:scale-110 transition-transform" />
+                    <VolumeX className="w-3 h-3 sm:w-4 sm:h-4 text-red-400 group-hover:scale-110 transition-transform" />
                   )}
                 </button>
                 <button
@@ -310,22 +338,38 @@ const SudoMode = () => {
                     setIsMinimized(true);
                     playClickSound();
                   }}
-                  className="p-2 hover:bg-white/10 rounded-lg transition-colors group"
+                  className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg transition-colors group"
                   title="Minimize (Ctrl+Shift+M)"
                 >
-                  <Minimize2 className="w-4 h-4 text-foreground/70 group-hover:text-white transition-colors" />
+                  <Minimize2 className="w-3 h-3 sm:w-4 sm:h-4 text-foreground/70 group-hover:text-white transition-colors" />
                 </button>
               </div>
             </div>
             
-            <div className="space-y-6">
-              <div className="border-b border-white/20 pb-4">
+            <div className="space-y-4 sm:space-y-6">
+              {/* Instagram Generator */}
+              <div className="border-b border-white/20 pb-3 sm:pb-4">
+                <button
+                  onClick={() => {
+                    setShowInstagramGenerator(true);
+                    playSuccessSound();
+                  }}
+                  className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 text-xs sm:text-sm bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:scale-105 transition-all w-full justify-center font-semibold"
+                >
+                  <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span>Instagram Generator</span>
+                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+              </div>
+
+              {/* Login Section */}
+              <div className="border-b border-white/20 pb-3 sm:pb-4">
                 {isLoggedIn ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 p-3 bg-green-500/20 rounded-xl">
-                      <User className="w-5 h-5 text-green-400" />
+                  <div className="space-y-2 sm:space-y-3">
+                    <div className="flex items-center gap-2 p-2 sm:p-3 bg-green-500/20 rounded-xl">
+                      <User className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
                       <div className="flex-1">
-                        <div className="text-sm font-bold text-green-400">Aniketh</div>
+                        <div className="text-xs sm:text-sm font-bold text-green-400">Aniketh</div>
                         <div className="text-xs text-green-400/70">Founder & Admin</div>
                       </div>
                       <button
@@ -333,9 +377,9 @@ const SudoMode = () => {
                           logout();
                           playClickSound();
                         }}
-                        className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
+                        className="p-1.5 sm:p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
                       >
-                        <LogOut className="w-4 h-4" />
+                        <LogOut className="w-3 h-3 sm:w-4 sm:h-4" />
                       </button>
                     </div>
                   </div>
@@ -346,33 +390,33 @@ const SudoMode = () => {
                         setShowLogin(!showLogin);
                         playClickSound();
                       }}
-                      className="flex items-center gap-3 p-3 text-sm bg-blue-500/20 text-blue-400 rounded-xl hover:bg-blue-500/30 transition-all w-full justify-center hover:scale-105"
+                      className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 text-xs sm:text-sm bg-blue-500/20 text-blue-400 rounded-xl hover:bg-blue-500/30 transition-all w-full justify-center hover:scale-105"
                     >
-                      <LogIn className="w-5 h-5" />
+                      <LogIn className="w-4 h-4 sm:w-5 sm:h-5" />
                       <span className="font-semibold">Founder Login</span>
                     </button>
                     
                     {showLogin && (
-                      <form onSubmit={handleLogin} className="mt-4 space-y-3 animate-fade-in">
+                      <form onSubmit={handleLogin} className="mt-3 sm:mt-4 space-y-2 sm:space-y-3 animate-fade-in">
                         <input
                           type="email"
                           placeholder="aniketh@optra.me"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          className="w-full p-3 text-sm bg-white/10 border border-white/30 rounded-xl focus:border-white/50 transition-colors"
+                          className="w-full p-2 sm:p-3 text-xs sm:text-sm bg-white/10 border border-white/30 rounded-xl focus:border-white/50 transition-colors"
                         />
                         <input
                           type="password"
                           placeholder="Password"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          className="w-full p-3 text-sm bg-white/10 border border-white/30 rounded-xl focus:border-white/50 transition-colors"
+                          className="w-full p-2 sm:p-3 text-xs sm:text-sm bg-white/10 border border-white/30 rounded-xl focus:border-white/50 transition-colors"
                         />
                         <button
                           type="submit"
-                          className="w-full p-3 text-sm bg-green-500/20 text-green-400 rounded-xl hover:bg-green-500/30 transition-all hover:scale-105 font-semibold"
+                          className="w-full p-2 sm:p-3 text-xs sm:text-sm bg-green-500/20 text-green-400 rounded-xl hover:bg-green-500/30 transition-all hover:scale-105 font-semibold"
                         >
-                          <Sparkles className="w-4 h-4 inline mr-2" />
+                          <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 inline mr-2" />
                           Access Admin Panel
                         </button>
                       </form>
@@ -381,21 +425,22 @@ const SudoMode = () => {
                 )}
               </div>
 
+              {/* Fun Controls */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Wand2 className="w-5 h-5" />
-                  <span className="text-sm font-bold">Fun Controls</span>
+                <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                  <Wand2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="text-xs sm:text-sm font-bold">Fun Controls</span>
                 </div>
                 <div className="space-y-2">
                   <button
                     onClick={toggleFunMode}
-                    className={`w-full p-3 text-sm rounded-xl hover:scale-105 transition-all font-semibold ${
+                    className={`w-full p-2 sm:p-3 text-xs sm:text-sm rounded-xl hover:scale-105 transition-all font-semibold ${
                       funMode 
                         ? 'bg-rainbow text-white animate-pulse' 
                         : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
                     }`}
                   >
-                    <Gamepad2 className="w-4 h-4 inline mr-2" />
+                    <Gamepad2 className="w-3 h-3 sm:w-4 sm:h-4 inline mr-2" />
                     {funMode ? 'Disable Fun Mode' : 'Enable Fun Mode'}
                   </button>
                   <button
@@ -403,17 +448,18 @@ const SudoMode = () => {
                       triggerConfetti();
                       playFunSound();
                     }}
-                    className="w-full p-3 text-sm bg-yellow-500/20 text-yellow-400 rounded-xl hover:bg-yellow-500/30 transition-all hover:scale-105 font-semibold"
+                    className="w-full p-2 sm:p-3 text-xs sm:text-sm bg-yellow-500/20 text-yellow-400 rounded-xl hover:bg-yellow-500/30 transition-all hover:scale-105 font-semibold"
                   >
                     🎉 Trigger Confetti
                   </button>
                 </div>
               </div>
 
+              {/* Developer Tools */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Bug className="w-5 h-5" />
-                  <span className="text-sm font-bold">Developer Tools</span>
+                <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                  <Bug className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="text-xs sm:text-sm font-bold">Developer Tools</span>
                 </div>
                 <div className="space-y-2">
                   <button
@@ -421,7 +467,7 @@ const SudoMode = () => {
                       navigate('/test-404');
                       playClickSound();
                     }}
-                    className="w-full p-3 text-sm bg-orange-500/20 text-orange-400 rounded-xl hover:bg-orange-500/30 transition-all hover:scale-105 font-semibold"
+                    className="w-full p-2 sm:p-3 text-xs sm:text-sm bg-orange-500/20 text-orange-400 rounded-xl hover:bg-orange-500/30 transition-all hover:scale-105 font-semibold"
                   >
                     Test 404 Page
                   </button>
@@ -430,24 +476,25 @@ const SudoMode = () => {
                       navigate('/non-existent-route');
                       playClickSound();
                     }}
-                    className="w-full p-3 text-sm bg-red-500/20 text-red-400 rounded-xl hover:bg-red-500/30 transition-all hover:scale-105 font-semibold"
+                    className="w-full p-2 sm:p-3 text-xs sm:text-sm bg-red-500/20 text-red-400 rounded-xl hover:bg-red-500/30 transition-all hover:scale-105 font-semibold"
                   >
                     Trigger Real 404
                   </button>
                 </div>
               </div>
 
+              {/* Visual Theme */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Palette className="w-5 h-5" />
-                  <span className="text-sm font-bold">Visual Theme</span>
+                <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                  <Palette className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="text-xs sm:text-sm font-bold">Visual Theme</span>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-1 sm:gap-2">
                   {themes.map(themeObj => (
                     <button
                       key={themeObj.id}
                       onClick={() => applyTheme(themeObj.id)}
-                      className={`p-3 text-xs rounded-xl border transition-all duration-300 hover:scale-105 font-semibold ${
+                      className={`p-2 sm:p-3 text-xs rounded-xl border transition-all duration-300 hover:scale-105 font-semibold ${
                         theme === themeObj.id 
                           ? 'border-white/50 bg-white/20 scale-105 text-white' 
                           : 'border-white/20 hover:border-white/40 hover:bg-white/10'
@@ -459,17 +506,18 @@ const SudoMode = () => {
                 </div>
               </div>
 
+              {/* Layout Mode */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Layout className="w-5 h-5" />
-                  <span className="text-sm font-bold">Layout Mode</span>
+                <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                  <Layout className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="text-xs sm:text-sm font-bold">Layout Mode</span>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-1 sm:gap-2">
                   {layouts.map(layoutObj => (
                     <button
                       key={layoutObj.id}
                       onClick={() => applyLayout(layoutObj.id)}
-                      className={`p-3 text-xs rounded-xl border transition-all duration-300 hover:scale-105 font-semibold ${
+                      className={`p-2 sm:p-3 text-xs rounded-xl border transition-all duration-300 hover:scale-105 font-semibold ${
                         layout === layoutObj.id 
                           ? 'border-white/50 bg-white/20 scale-105 text-white' 
                           : 'border-white/20 hover:border-white/40 hover:bg-white/10'
@@ -481,6 +529,7 @@ const SudoMode = () => {
                 </div>
               </div>
 
+              {/* Reset Button */}
               <button
                 onClick={() => {
                   document.body.className = '';
@@ -490,14 +539,14 @@ const SudoMode = () => {
                   playSuccessSound();
                   console.log('🔄 All customizations reset!');
                 }}
-                className="w-full p-3 text-sm bg-red-500/20 text-red-400 rounded-xl hover:bg-red-500/30 transition-all hover:scale-105 font-bold"
+                className="w-full p-2 sm:p-3 text-xs sm:text-sm bg-red-500/20 text-red-400 rounded-xl hover:bg-red-500/30 transition-all hover:scale-105 font-bold"
               >
-                <Zap className="w-4 h-4 inline mr-2" />
+                <Zap className="w-3 h-3 sm:w-4 sm:h-4 inline mr-2" />
                 Reset Everything
               </button>
             </div>
 
-            <div className="text-xs text-foreground/60 mt-6 space-y-1 leading-relaxed">
+            <div className="text-xs text-foreground/60 mt-4 sm:mt-6 space-y-1 leading-relaxed">
               <p><strong>Desktop:</strong> Top-left corner or Ctrl+Shift+S</p>
               <p><strong>Mobile:</strong> <Smartphone className="w-3 h-3 inline mx-1" />Tap top-right corner 5x quickly</p>
               <p><strong>Minimize:</strong> Ctrl+Shift+M or click minimize button</p>
