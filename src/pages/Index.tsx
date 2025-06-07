@@ -1,20 +1,11 @@
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import Navigation from '../components/Navigation';
 import AnimatedHeroText from '../components/AnimatedHeroText';
 import SecretSudoButton from '../components/SecretSudoButton';
-import { ArrowRight, Eye, Code2, Layers, Sparkles, Target, Users } from 'lucide-react';
+import { ArrowRight, Eye, Code2, Layers } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Index = () => {
-  const [scrollY, setScrollY] = useState(0);
-
-  useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
   useEffect(() => {
     // SEO meta tags
     document.title = 'Optra Design - Premium Design Studio by Aniketh | Brand Identity & Digital Experiences';
@@ -75,40 +66,19 @@ const Index = () => {
 
   const capabilities = [
     {
-      icon: <Eye className="w-8 h-8" />,
+      icon: <Eye className="w-7 h-7" />,
       title: "Visual Identity",
-      description: "Comprehensive brand systems that capture essence and drive market recognition through strategic design principles and cohesive visual storytelling.",
-      features: ["Logo Design", "Brand Guidelines", "Color Palettes", "Typography Systems"]
+      description: "Comprehensive brand systems that capture essence and drive market recognition through strategic design."
     },
     {
-      icon: <Code2 className="w-8 h-8" />,
+      icon: <Code2 className="w-7 h-7" />,
       title: "Digital Products",
-      description: "User-centered interfaces and interactions that convert visitors into customers through thoughtful UX research and data-driven design decisions.",
-      features: ["UI/UX Design", "Prototyping", "User Research", "Conversion Optimization"]
+      description: "User-centered interfaces and interactions that convert visitors into customers through thoughtful UX."
     },
     {
-      icon: <Layers className="w-8 h-8" />,
+      icon: <Layers className="w-7 h-7" />,
       title: "Creative Strategy",
-      description: "Data-driven creative direction that aligns design decisions with measurable business outcomes and long-term growth objectives.",
-      features: ["Brand Strategy", "Design Systems", "Content Strategy", "Performance Analytics"]
-    },
-    {
-      icon: <Sparkles className="w-8 h-8" />,
-      title: "Digital Experiences",
-      description: "Immersive digital experiences that engage audiences through innovative interactions and cutting-edge design technologies.",
-      features: ["Interactive Design", "Motion Graphics", "3D Visualization", "Web Experiences"]
-    },
-    {
-      icon: <Target className="w-8 h-8" />,
-      title: "Brand Positioning",
-      description: "Strategic positioning that differentiates your brand in competitive markets through unique value propositions and market insights.",
-      features: ["Market Research", "Competitive Analysis", "Brand Messaging", "Value Proposition"]
-    },
-    {
-      icon: <Users className="w-8 h-8" />,
-      title: "Consultation",
-      description: "Expert guidance and strategic advice to help businesses make informed design decisions that drive growth and market success.",
-      features: ["Design Audits", "Strategy Sessions", "Team Training", "Process Optimization"]
+      description: "Data-driven creative direction that aligns design decisions with measurable business outcomes."
     }
   ];
 
@@ -116,15 +86,6 @@ const Index = () => {
     <div className="min-h-screen relative bg-zinc-950 overflow-hidden">
       <Navigation />
       <SecretSudoButton />
-      
-      {/* Scroll blur overlay */}
-      <div 
-        className="fixed inset-0 pointer-events-none z-[1] transition-all duration-500"
-        style={{
-          backdropFilter: `blur(${Math.min(scrollY / 50, 2)}px)`,
-          background: `rgba(9, 9, 11, ${Math.min(scrollY / 1000, 0.1)})`
-        }}
-      />
       
       {/* Enhanced Fun Background Elements with More Vibrant Colors */}
       <div className="absolute inset-0 overflow-hidden">
@@ -175,60 +136,43 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Enhanced Capabilities Section */}
-      <section className="py-40 px-6 relative z-10">
-        <div className="max-w-7xl mx-auto">
-          <div className="mb-24">
-            <div className="flex items-center gap-3 mb-10">
-              <div className="w-12 h-px bg-gradient-to-r from-pink-400/90 to-transparent" />
+      {/* Capabilities Section */}
+      <section className="py-32 px-6 relative z-10">
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-20">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-8 h-px bg-gradient-to-r from-pink-400/90 to-transparent" />
               <span className="text-sm font-medium text-zinc-400 tracking-wider uppercase">Capabilities</span>
             </div>
-            <h2 className="text-5xl md:text-6xl lg:text-7xl font-light text-white leading-tight mb-8 max-w-5xl">
+            <h2 className="text-4xl md:text-5xl font-light text-white leading-tight mb-6 max-w-3xl">
               Precision-crafted solutions that bridge the gap between 
               <span className="font-medium italic text-zinc-300"> vision and reality</span>
             </h2>
-            <p className="text-xl text-zinc-400 max-w-3xl leading-relaxed">
-              Our comprehensive suite of design services transforms your brand vision into compelling digital experiences that drive measurable business results.
-            </p>
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-8 lg:gap-12">
+          <div className="grid lg:grid-cols-3 gap-12 lg:gap-16">
             {capabilities.map((capability, index) => (
               <div 
                 key={index}
-                className="group relative"
+                className="group"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
-                <div className="bg-zinc-900/50 backdrop-blur-sm border border-zinc-800/50 rounded-2xl p-8 h-full transition-all duration-500 hover:border-zinc-700/70 hover:bg-zinc-900/70 hover:shadow-2xl hover:shadow-purple-500/10">
-                  <div className="flex items-start gap-6 mb-8">
-                    <div className="p-4 bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700 rounded-xl group-hover:border-zinc-600 transition-all duration-300 group-hover:shadow-lg">
-                      <div className="text-zinc-300 group-hover:text-white transition-colors duration-300">
-                        {capability.icon}
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-2xl font-semibold text-white mb-4 group-hover:text-zinc-100 transition-colors">
-                        {capability.title}
-                      </h3>
-                      <p className="text-zinc-400 leading-relaxed text-base mb-6 group-hover:text-zinc-300 transition-colors">
-                        {capability.description}
-                      </p>
+                <div className="flex items-start gap-4 mb-6">
+                  <div className="p-3 bg-zinc-900 border border-zinc-800 rounded-lg group-hover:border-zinc-700 transition-colors">
+                    <div className="text-zinc-400 group-hover:text-zinc-300 transition-colors">
+                      {capability.icon}
                     </div>
                   </div>
-                  
-                  <div className="space-y-3">
-                    {capability.features.map((feature, featureIndex) => (
-                      <div key={featureIndex} className="flex items-center gap-3 text-sm">
-                        <div className="w-2 h-2 rounded-full bg-gradient-to-r from-pink-400 to-purple-400 flex-shrink-0" />
-                        <span className="text-zinc-400 group-hover:text-zinc-300 transition-colors">
-                          {feature}
-                        </span>
-                      </div>
-                    ))}
+                  <div>
+                    <h3 className="text-xl font-medium text-white mb-3 group-hover:text-zinc-200 transition-colors">
+                      {capability.title}
+                    </h3>
+                    <p className="text-zinc-400 leading-relaxed text-sm">
+                      {capability.description}
+                    </p>
                   </div>
                 </div>
-                
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-pink-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                <div className="h-px bg-gradient-to-r from-zinc-800 to-transparent group-hover:from-zinc-700 transition-colors" />
               </div>
             ))}
           </div>

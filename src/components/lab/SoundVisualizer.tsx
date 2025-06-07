@@ -23,9 +23,8 @@ const SoundVisualizer = () => {
       try {
         const audio = new Audio();
         audio.src = '/Crab Rave - Noisestorm.mp3';
-        audio.volume = 0.7;
+        audio.volume = 0.7; // Fixed volume
         audio.preload = 'metadata';
-        audio.crossOrigin = 'anonymous';
         
         audio.addEventListener('loadedmetadata', () => {
           setDuration(audio.duration);
@@ -74,9 +73,11 @@ const SoundVisualizer = () => {
     if (!audioRef.current || audioContextRef.current) return false;
 
     try {
+      // Create audio context
       const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
       const audioContext = new AudioContext();
       
+      // Resume context if suspended
       if (audioContext.state === 'suspended') {
         await audioContext.resume();
       }
@@ -84,15 +85,17 @@ const SoundVisualizer = () => {
       const analyser = audioContext.createAnalyser();
       const source = audioContext.createMediaElementSource(audioRef.current);
       
-      // Optimized settings for better visualization
-      analyser.fftSize = 512;
-      analyser.smoothingTimeConstant = 0.8;
-      analyser.minDecibels = -100;
-      analyser.maxDecibels = -30;
+      // Configure analyser for better visualization
+      analyser.fftSize = 256; // Gives us 128 frequency bins
+      analyser.smoothingTimeConstant = 0.85;
+      analyser.minDecibels = -90;
+      analyser.maxDecibels = -10;
       
+      // Connect audio graph
       source.connect(analyser);
       analyser.connect(audioContext.destination);
       
+      // Store references
       audioContextRef.current = audioContext;
       analyserRef.current = analyser;
       sourceRef.current = source;
@@ -111,47 +114,28 @@ const SoundVisualizer = () => {
       return;
     }
 
+    // Get frequency data
     analyserRef.current.getByteFrequencyData(dataArrayRef.current);
     
+    // Process frequency data into 32 bars
     const newBars = [];
     const binCount = dataArrayRef.current.length;
     const barsCount = 32;
+    const binSize = Math.floor(binCount / barsCount);
     
     for (let i = 0; i < barsCount; i++) {
-      // Use exponential distribution for better frequency representation
-      const startFreq = Math.pow(2, (i / barsCount) * 8);
-      const endFreq = Math.pow(2, ((i + 1) / barsCount) * 8);
-      
-      const startBin = Math.floor((startFreq / 22050) * binCount);
-      const endBin = Math.floor((endFreq / 22050) * binCount);
-      
       let sum = 0;
-      let count = 0;
+      const startBin = i * binSize;
+      const endBin = Math.min(startBin + binSize, binCount);
       
-      for (let j = startBin; j <= endBin && j < binCount; j++) {
+      // Average frequency data for this bar
+      for (let j = startBin; j < endBin; j++) {
         sum += dataArrayRef.current[j];
-        count++;
       }
       
-      const average = count > 0 ? sum / count : 0;
-      
-      // Enhanced sensitivity with proper scaling
-      let height = (average / 255) * 100;
-      
-      // Apply frequency-specific boosts
-      if (i < 8) {
-        // Bass boost
-        height *= 1.3;
-      } else if (i > 24) {
-        // High frequency boost
-        height *= 1.8;
-      } else {
-        // Mid frequency slight boost
-        height *= 1.1;
-      }
-      
-      // Ensure reasonable range
-      height = Math.max(15, Math.min(90, height));
+      const average = sum / (endBin - startBin);
+      // Convert to height percentage with minimum of 20 and maximum of 95
+      const height = Math.max(20, Math.min(95, (average / 255) * 100));
       newBars.push(height);
     }
     
@@ -186,6 +170,7 @@ const SoundVisualizer = () => {
 
     if (!isPlaying) {
       try {
+        // Initialize audio analysis if not already done
         if (!audioContextRef.current) {
           const initialized = await initializeAudioAnalysis();
           if (!initialized && !audioError) {
@@ -193,6 +178,7 @@ const SoundVisualizer = () => {
           }
         }
         
+        // Resume audio context if suspended
         if (audioContextRef.current?.state === 'suspended') {
           await audioContextRef.current.resume();
         }
@@ -200,6 +186,7 @@ const SoundVisualizer = () => {
         await audioRef.current.play();
         setIsPlaying(true);
         
+        // Start visualization
         if (analyserRef.current && !audioError) {
           updateVisualization();
         } else {
