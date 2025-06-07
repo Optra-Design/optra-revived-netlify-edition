@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Pause } from 'lucide-react';
 
@@ -86,8 +85,8 @@ const SoundVisualizer = () => {
       const source = audioContext.createMediaElementSource(audioRef.current);
       
       // Configure analyser for better visualization
-      analyser.fftSize = 256; // Gives us 128 frequency bins
-      analyser.smoothingTimeConstant = 0.85;
+      analyser.fftSize = 512; // Gives us 256 frequency bins for better resolution
+      analyser.smoothingTimeConstant = 0.8;
       analyser.minDecibels = -90;
       analyser.maxDecibels = -10;
       
@@ -117,25 +116,38 @@ const SoundVisualizer = () => {
     // Get frequency data
     analyserRef.current.getByteFrequencyData(dataArrayRef.current);
     
-    // Process frequency data into 32 bars
+    // Process frequency data into 32 bars with linear distribution
     const newBars = [];
-    const binCount = dataArrayRef.current.length;
+    const binCount = dataArrayRef.current.length; // Should be 256 with fftSize 512
     const barsCount = 32;
     const binSize = Math.floor(binCount / barsCount);
     
     for (let i = 0; i < barsCount; i++) {
       let sum = 0;
-      const startBin = i * binSize;
-      const endBin = Math.min(startBin + binSize, binCount);
+      let count = 0;
       
-      // Average frequency data for this bar
-      for (let j = startBin; j < endBin; j++) {
+      // Use linear distribution with some overlap for smoother visualization
+      const startBin = Math.floor(i * binSize);
+      const endBin = Math.min(startBin + binSize + 2, binCount - 1); // Small overlap
+      
+      // Average the frequency data in this range
+      for (let j = startBin; j <= endBin; j++) {
         sum += dataArrayRef.current[j];
+        count++;
       }
       
-      const average = sum / (endBin - startBin);
-      // Convert to height percentage with minimum of 20 and maximum of 95
-      const height = Math.max(20, Math.min(95, (average / 255) * 100));
+      const average = count > 0 ? sum / count : 0;
+      
+      // Apply gentle boost to mid and high frequencies without overdoing it
+      let sensitivity = 1;
+      if (i > barsCount * 0.4 && i < barsCount * 0.8) {
+        sensitivity = 1.2; // Slight boost for mid frequencies
+      } else if (i >= barsCount * 0.8) {
+        sensitivity = 1.1; // Very gentle boost for high frequencies
+      }
+      
+      // Convert to height percentage with medium baseline
+      const height = Math.max(25, Math.min(85, (average / 255) * 100 * sensitivity));
       newBars.push(height);
     }
     
