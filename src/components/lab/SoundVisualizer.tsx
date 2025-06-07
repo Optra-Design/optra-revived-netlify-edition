@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Pause } from 'lucide-react';
 
@@ -16,6 +15,7 @@ const SoundVisualizer = () => {
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const animationRef = useRef<number>();
   const dataArrayRef = useRef<Uint8Array | null>(null);
+  const previousBarsRef = useRef<number[]>(Array.from({ length: 32 }, () => 20));
 
   // Initialize audio element on component mount
   useEffect(() => {
@@ -84,11 +84,11 @@ const SoundVisualizer = () => {
       const analyser = audioContext.createAnalyser();
       const source = audioContext.createMediaElementSource(audioRef.current);
       
-      // Optimized settings for better visualization
-      analyser.fftSize = 512;
-      analyser.smoothingTimeConstant = 0.8;
-      analyser.minDecibels = -100;
-      analyser.maxDecibels = -30;
+      // Refined settings for smoother visualization
+      analyser.fftSize = 1024;
+      analyser.smoothingTimeConstant = 0.85;
+      analyser.minDecibels = -90;
+      analyser.maxDecibels = -10;
       
       source.connect(analyser);
       analyser.connect(audioContext.destination);
@@ -116,45 +116,46 @@ const SoundVisualizer = () => {
     const newBars = [];
     const binCount = dataArrayRef.current.length;
     const barsCount = 32;
+    const previousBars = previousBarsRef.current;
     
     for (let i = 0; i < barsCount; i++) {
-      // Use exponential distribution for better frequency representation
-      const startFreq = Math.pow(2, (i / barsCount) * 8);
-      const endFreq = Math.pow(2, ((i + 1) / barsCount) * 8);
+      // Linear frequency distribution for better coverage
+      const binIndex = Math.floor((i / (barsCount - 1)) * (binCount - 1));
+      const rawValue = dataArrayRef.current[binIndex];
       
-      const startBin = Math.floor((startFreq / 22050) * binCount);
-      const endBin = Math.floor((endFreq / 22050) * binCount);
+      // Normalize to 0-1 range with adjusted sensitivity
+      let normalizedValue = rawValue / 255;
       
-      let sum = 0;
-      let count = 0;
-      
-      for (let j = startBin; j <= endBin && j < binCount; j++) {
-        sum += dataArrayRef.current[j];
-        count++;
-      }
-      
-      const average = count > 0 ? sum / count : 0;
-      
-      // Enhanced sensitivity with proper scaling
-      let height = (average / 255) * 100;
-      
-      // Apply frequency-specific boosts
+      // Apply frequency-specific adjustments
       if (i < 8) {
-        // Bass boost
-        height *= 1.3;
-      } else if (i > 24) {
-        // High frequency boost
-        height *= 1.8;
-      } else {
-        // Mid frequency slight boost
-        height *= 1.1;
+        // Bass frequencies - moderate boost
+        normalizedValue *= 1.1;
+      } else if (i > 20) {
+        // High frequencies - stronger boost
+        normalizedValue *= 1.4;
       }
       
-      // Ensure reasonable range
-      height = Math.max(15, Math.min(90, height));
+      // Convert to height percentage with controlled range
+      let height = normalizedValue * 60 + 20; // Range: 20-80%
+      
+      // Smooth transitions to prevent sudden jumps
+      const previousHeight = previousBars[i] || 20;
+      const maxChange = 8; // Maximum change per frame
+      
+      if (Math.abs(height - previousHeight) > maxChange) {
+        if (height > previousHeight) {
+          height = previousHeight + maxChange;
+        } else {
+          height = previousHeight - maxChange;
+        }
+      }
+      
+      // Ensure reasonable bounds
+      height = Math.max(15, Math.min(75, height));
       newBars.push(height);
     }
     
+    previousBarsRef.current = newBars;
     setBars(newBars);
     animationRef.current = requestAnimationFrame(updateVisualization);
   }, [isPlaying]);
@@ -288,11 +289,11 @@ const SoundVisualizer = () => {
       </div>
 
       {/* Visualizer */}
-      <div className="flex items-end gap-2 h-64 bg-gradient-to-b from-orange-900/20 to-red-900/20 backdrop-blur-sm p-8 rounded-3xl shadow-2xl border border-orange-400/20">
+      <div className="flex items-end gap-2 h-64 bg-gradient-to-b from-orange-900/20 to-red-900/20 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-orange-400/20">
         {bars.map((height, i) => (
           <div
             key={i}
-            className="w-4 rounded-t-xl transition-all duration-75 ease-out"
+            className="w-4 rounded-t-xl transition-all duration-100 ease-out"
             style={{
               height: `${height}%`,
               background: `linear-gradient(to top, 
